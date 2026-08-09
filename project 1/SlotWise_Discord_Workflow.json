@@ -1,0 +1,25 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "content": "PHASE 1 — INTENT ROUTING\n\nReceives Discord messages and determines:\nGREETING / BOOK / MODIFY / CANCEL / INFO / HUMAN / UNKNOWN",
+        "height": 1392,
+        "width": 2256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -400,
+        -512
+      ],
+      "typeVersion": 1,
+      "id": "6167309d-dfb4-482f-903d-40309fdb7d5e",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {},
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c7f59735934440b5ca2abd90f340f0b295178e1dc8fbae01e39389052ab6c101"
+  }
+}
