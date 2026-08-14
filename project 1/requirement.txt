@@ -1,0 +1,16 @@
+First activate your venv:
+
+cd D:\SlotWise
+venv\Scripts\activate
+
+Then:
+
+pip freeze > requirements.txt
+
+Now you have:
+
+requirements.txt
+
+Someone else can recreate your environment using:
+
+pip install -r requirements.txt
