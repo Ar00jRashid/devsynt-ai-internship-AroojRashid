@@ -2,24 +2,2572 @@
   "nodes": [
     {
       "parameters": {
-        "content": "PHASE 1 — INTENT ROUTING\n\nReceives Discord messages and determines:\nGREETING / BOOK / MODIFY / CANCEL / INFO / HUMAN / UNKNOWN",
-        "height": 1392,
-        "width": 2256
+        "httpMethod": "POST",
+        "path": "slotwise",
+        "responseMode": "responseNode",
+        "options": {}
       },
-      "type": "n8n-nodes-base.stickyNote",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
       "position": [
-        -400,
-        -512
+        -2320,
+        736
       ],
-      "typeVersion": 1,
-      "id": "6167309d-dfb4-482f-903d-40309fdb7d5e",
-      "name": "Sticky Note"
+      "id": "5707571a-3106-4226-8650-4971afe0afda",
+      "name": "Webhook",
+      "webhookId": "9eb3384d-f036-47f1-aa26-a091f80f439c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || {};\n\nreturn [\n  {\n    json: {\n      username: body.username || \"\",\n      user_id: body.user_id || \"\",\n      channel_id: body.channel_id || \"\",\n      channel_name: body.channel_name || \"\",\n      message: body.message || \"\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2112,
+        736
+      ],
+      "id": "39dbea07-30c9-4087-8474-00f5db3aa0da",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appMmaMqLiBwe0WfS",
+          "mode": "list",
+          "cachedResultName": "SlotWise",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblzGGq4TLBvL8izn",
+          "mode": "list",
+          "cachedResultName": "Conversations",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS/tblzGGq4TLBvL8izn"
+        },
+        "filterByFormula": "=={{ '{Discord User ID} = \"' + $json.user_id + '\"' }}",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -1904,
+        736
+      ],
+      "id": "fdcb08ad-696d-48bd-811f-6a3fe6997267",
+      "name": "Get Conversation State",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1fINMSXkeb78fcOT",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const parsed = $('Code in JavaScript').first().json;\nconst records = $input.all();\nlet session = { recordId: null, stage: 'NEW', party_size: '', booking_date: '', booking_time: '', proposed_slots: '' };\nif (records.length > 0 && records[0].json && records[0].json.id) {\n  const rec = records[0].json;\n  const f = rec.fields || {};\n  session = {\n    recordId: rec.id,\n    stage: f['State'] || 'NEW',\n    party_size: f['Party Size'] || '',\n    booking_date: f['Date'] || '',\n    booking_time: f['Preferred Time'] || '',\n    proposed_slots: f['Notes'] || ''\n  };\n}\nreturn [{ json: { ...parsed, session } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1680,
+        736
+      ],
+      "id": "31b6c5f1-0a3f-4baf-bc74-f90c6859dd0f",
+      "name": "Merge Session"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = ($json.message || '').toLowerCase();\nconst isInterrupt = /cancel|human|agent|representative|talk to someone|real person/.test(msg);\nreturn [{ json: { ...$json, isInterrupt } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1456,
+        736
+      ],
+      "id": "ae5439b0-329f-4ccc-9c30-3e44ae51bd91",
+      "name": "Detect Interrupt"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "34cfa407-23da-49b8-8dbd-6cf5c877d23c",
+              "leftValue": "={{ $json.session.stage }}",
+              "rightValue": "NEW",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "765f6228-4fcd-4879-a070-75517f30e26a",
+              "leftValue": "={{ $json.session.stage }}",
+              "rightValue": "END",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "c854590c-2fb5-4780-bbf5-599d60723fb3",
+              "leftValue": "={{ $json.session.stage }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "89bfaec9-6e4f-401b-b226-d91343931c75",
+              "leftValue": "={{ $json.isInterrupt }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1280,
+        736
+      ],
+      "id": "1d4e228c-06f3-4e00-a765-955def7e7f51",
+      "name": "Is Active Booking Session"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are the intent classifier for SlotWise, a restaurant booking assistant.\n\nClassify the user's message into exactly ONE of these intents:\n\nGREETING\nBOOK\nMODIFY\nCANCEL\nINFO\nHUMAN\nUNKNOWN\n\nDefinitions:\n\nGREETING:\nGreetings or starting a conversation.\n\nBOOK:\nThe user wants to make a new restaurant reservation.\n\nMODIFY:\nThe user wants to change an existing reservation.\n\nCANCEL:\nThe user wants to cancel an existing reservation.\n\nINFO:\nThe user is asking for restaurant information, such as opening hours,\nlocation, menu, services, or general information.\n\nHUMAN:\nThe user wants to speak to a human or staff member.\n\nUNKNOWN:\nThe message does not clearly match any category.\n\nReturn ONLY valid JSON in this format:\n\n{\n  \"intent\": \"GREETING\"\n}\n\nUser message:\n{{ $json.message }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -896,
+        464
+      ],
+      "id": "b11d29d3-bb74-4f5d-9bc1-b2e21142ad6f",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=={{ $json.user_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -800,
+        688
+      ],
+      "id": "836053c9-cb6b-4457-9699-0b2c9cf145bd",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -912,
+        672
+      ],
+      "id": "31e4f5e4-c269-48e0-9b9f-93e751da5c31",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "XPse3zUljgqMzvjP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawOutput = $json.output;\n\nconst cleaned = rawOutput\n  .replace(/```json\\s*/gi, '')\n  .replace(/```\\s*/g, '')\n  .trim();\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (error) {\n  throw new Error(`Could not parse AI output: ${rawOutput}`);\n}\n\nreturn [\n  {\n    json: {\n      ...$json,\n      intent: parsed.intent\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        464
+      ],
+      "id": "0393e595-a64d-49c1-99ac-bc8164721fdc",
+      "name": "parse intent"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "GREETING",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "820d5da1-6a59-49af-8f82-2b6c57f3d158"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5346bf17-4d53-4334-8a53-0d033ebe97d7",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "BOOK",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "cf0fde31-c2e2-4cbd-aa5f-51835d5c055f",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "MODIFY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bf187021-0a5b-4856-bb45-22bceab8f599",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "CANCEL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ddd1504d-2535-4f43-aaaa-3091ee03efc5",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "INFO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a8f499bc-ea76-47dc-8159-f5f9954c46dd",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "HUMAN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "dd7e49e1-6a98-4f1b-8b69-f006e12d3e31",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "UNKNOWN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -384,
+        464
+      ],
+      "id": "2d1a85f2-ecc3-483f-b584-a962767ab017",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ff4fb07b-f613-4961-a7e2-2e535f91b326",
+              "name": "reply",
+              "value": "Hello! 👋 Welcome to SlotWise. How can I help you today?",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d61d5ff6-d096-430c-b954-6005993d8e2d",
+      "name": "Greeting Response"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "020e94bf-506b-4709-ab23-b53245894a4a",
+              "name": "reply",
+              "value": "Sure! I'd be happy to help you make a reservation. 🍽️ How many people will be in your party?",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        160
+      ],
+      "id": "ee9b17c3-86e1-4db6-b7fb-65f5d69f54cb",
+      "name": "Book Response"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "appMmaMqLiBwe0WfS",
+          "mode": "list",
+          "cachedResultName": "SlotWise",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblzGGq4TLBvL8izn",
+          "mode": "list",
+          "cachedResultName": "Conversations",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS/tblzGGq4TLBvL8izn"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "=",
+            "Discord User ID": "={{ $('Merge Session').item.json.user_id }}",
+            "Username": "={{ $('Merge Session').item.json.username }}",
+            "State": "AWAITING_PARTY_SIZE"
+          },
+          "matchingColumns": [
+            "Discord User ID"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Session ID",
+              "displayName": "Session ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Discord User ID",
+              "displayName": "Discord User ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Username",
+              "displayName": "Username",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Booking Type",
+              "displayName": "Booking Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Service",
+              "displayName": "Service",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Preferred Time",
+              "displayName": "Preferred Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Selected Slot",
+              "displayName": "Selected Slot",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "State",
+              "displayName": "State",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "AWAITING_PARTY_SIZE",
+                  "value": "AWAITING_PARTY_SIZE"
+                },
+                {
+                  "name": "AWAITING_DATE",
+                  "value": "AWAITING_DATE"
+                },
+                {
+                  "name": "AWAITING_TIME",
+                  "value": "AWAITING_TIME"
+                },
+                {
+                  "name": "AWAITING_SLOT_CONFIRM",
+                  "value": "AWAITING_SLOT_CONFIRM"
+                },
+                {
+                  "name": "NEW",
+                  "value": "NEW"
+                },
+                {
+                  "name": "END",
+                  "value": "END"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Updated At",
+              "displayName": "Updated At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Assignee",
+              "displayName": "Assignee",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Todo",
+                  "value": "Todo"
+                },
+                {
+                  "name": "In progress",
+                  "value": "In progress"
+                },
+                {
+                  "name": "Done",
+                  "value": "Done"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachments",
+              "displayName": "Attachments",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachment Summary",
+              "displayName": "Attachment Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        160
+      ],
+      "id": "4ef7855b-e203-4a59-8cb7-5765bbdfc7a2",
+      "name": "Start Booking Session",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1fINMSXkeb78fcOT",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { reply: $('Book Response').item.json.reply } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        160
+      ],
+      "id": "d8908c70-c077-44e6-8cdd-993cd700f943",
+      "name": "Attach Book Reply"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3abd2090-5f83-4c51-a77f-7ba6d568a27c",
+              "name": "reply",
+              "value": "Sure! I can help you modify your reservation. Please provide your booking ID.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        320
+      ],
+      "id": "83503194-3edc-4efc-8fd4-702cc5bbbf57",
+      "name": "Modify Response"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "063214d1-1dd1-4451-beec-189482e2c117",
+              "name": "reply",
+              "value": "I can help you cancel your reservation. Please provide your booking ID (or reply with the date and time you booked) and I'll take care of it.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        480
+      ],
+      "id": "38825077-2fe9-4e1f-b56d-9f652dabeaf9",
+      "name": "Cancel Response"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "appMmaMqLiBwe0WfS",
+          "mode": "list",
+          "cachedResultName": "SlotWise",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblzGGq4TLBvL8izn",
+          "mode": "list",
+          "cachedResultName": "Conversations",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS/tblzGGq4TLBvL8izn"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "=={{ $('Merge Session').item.json.session.recordId }}",
+            "State": "NEW"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true
+            },
+            {
+              "id": "Session ID",
+              "displayName": "Session ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Discord User ID",
+              "displayName": "Discord User ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Username",
+              "displayName": "Username",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Booking Type",
+              "displayName": "Booking Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Service",
+              "displayName": "Service",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Preferred Time",
+              "displayName": "Preferred Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Selected Slot",
+              "displayName": "Selected Slot",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "State",
+              "displayName": "State",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "AWAITING_PARTY_SIZE",
+                  "value": "AWAITING_PARTY_SIZE"
+                },
+                {
+                  "name": "AWAITING_DATE",
+                  "value": "AWAITING_DATE"
+                },
+                {
+                  "name": "AWAITING_TIME",
+                  "value": "AWAITING_TIME"
+                },
+                {
+                  "name": "AWAITING_SLOT_CONFIRM",
+                  "value": "AWAITING_SLOT_CONFIRM"
+                },
+                {
+                  "name": "NEW",
+                  "value": "NEW"
+                },
+                {
+                  "name": "END",
+                  "value": "END"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Updated At",
+              "displayName": "Updated At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Assignee",
+              "displayName": "Assignee",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Todo",
+                  "value": "Todo"
+                },
+                {
+                  "name": "In progress",
+                  "value": "In progress"
+                },
+                {
+                  "name": "Done",
+                  "value": "Done"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachments",
+              "displayName": "Attachments",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachment Summary",
+              "displayName": "Attachment Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        480
+      ],
+      "id": "3b747e5a-2556-45f7-857a-36952f73aaf3",
+      "name": "Reset Session (Cancel)",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1fINMSXkeb78fcOT",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { reply: $('Cancel Response').item.json.reply } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        480
+      ],
+      "id": "50bb51ec-fc10-4866-afcb-ba66024f1eaa",
+      "name": "Attach Cancel Reply"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8e5f1704-94f9-45a9-a746-e9b959a6c647",
+              "name": "reply",
+              "value": "🕐 We're open Tuesday–Sunday, 12:00 PM – 10:30 PM (closed Mondays). Ask me about our menu, location, or booking a table anytime!",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        656
+      ],
+      "id": "8b6dcc1c-3b53-42da-9f87-9ff6281fae7e",
+      "name": "Info Response"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "83c8c44c-5339-4c09-ac27-78dd68953a97",
+              "name": "reply",
+              "value": "Of course. 👤 I've notified our team and connected you with a human representative. Please wait a moment — someone will be with you shortly.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        16,
+        800
+      ],
+      "id": "027c3251-df14-4006-bac8-10265e3497bf",
+      "name": "Human Response"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appMmaMqLiBwe0WfS",
+          "mode": "list",
+          "cachedResultName": "SlotWise",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblUGTAKqO6L5VPQc",
+          "mode": "list",
+          "cachedResultName": "Handoffs",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS/tblUGTAKqO6L5VPQc"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Discord User ID": "= {{ $('Merge Session').item.json.user_id }}"
+          },
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        800
+      ],
+      "id": "36d9822f-8261-4931-83ec-97c04b97512c",
+      "name": "Create Handoff",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1fINMSXkeb78fcOT",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { reply: $('Human Response').item.json.reply } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        800
+      ],
+      "id": "a9de7664-c301-41e6-b520-991d3bebd77e",
+      "name": "Attach Human Reply"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e7a2545f-7694-4dac-888b-ba5943272583",
+              "name": "reply",
+              "value": "I'm sorry, I didn't quite understand that. You can ask me to book, modify, or cancel a reservation, ask for restaurant information, or ask for a human.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        16,
+        992
+      ],
+      "id": "68a2481c-6bdf-4b5f-a76b-58a81a28a7d5",
+      "name": "Unknown Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1264,
+        656
+      ],
+      "id": "b9c41e31-0c8d-4e8f-b283-af1a289dcd26",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e393b4e8-c4ac-49b1-858b-17c6206a5497",
+                    "leftValue": "={{ $json.session.stage }}",
+                    "rightValue": "AWAITING_PARTY_SIZE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2154eb99-5ff0-417f-9d35-b99652135a89",
+                    "leftValue": "={{ $json.session.stage }}",
+                    "rightValue": "AWAITING_DATE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "73a384c6-cd55-4d09-9dc0-9081dbe87753",
+                    "leftValue": "={{ $json.session.stage }}",
+                    "rightValue": "AWAITING_TIME",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "30500c87-ecd3-4980-8960-347abd98cac8",
+                    "leftValue": "={{ $json.session.stage }}",
+                    "rightValue": "AWAITING_SLOT_CONFIRM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": 4
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -880,
+        1408
+      ],
+      "id": "643ff194-201c-4bd7-9f7d-8b68a2da804f",
+      "name": "Booking Stage Router"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $json.message || '';\nconst match = msg.match(/\\d+/);\nconst partySize = match ? match[0] : '2';\nreturn [{ json: { ...$json, extracted: { party_size: partySize } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        1200
+      ],
+      "id": "49dc5b9e-b048-4401-aeff-53230e38cd34",
+      "name": "Extract Party Size"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appMmaMqLiBwe0WfS",
+          "mode": "list",
+          "cachedResultName": "SlotWise",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblzGGq4TLBvL8izn",
+          "mode": "list",
+          "cachedResultName": "Conversations",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS/tblzGGq4TLBvL8izn"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.session.recordId }}",
+            "State": "AWAITING_DATE"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true
+            },
+            {
+              "id": "Session ID",
+              "displayName": "Session ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Discord User ID",
+              "displayName": "Discord User ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Username",
+              "displayName": "Username",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Booking Type",
+              "displayName": "Booking Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Service",
+              "displayName": "Service",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Preferred Time",
+              "displayName": "Preferred Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Selected Slot",
+              "displayName": "Selected Slot",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "State",
+              "displayName": "State",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "AWAITING_PARTY_SIZE",
+                  "value": "AWAITING_PARTY_SIZE"
+                },
+                {
+                  "name": "AWAITING_DATE",
+                  "value": "AWAITING_DATE"
+                },
+                {
+                  "name": "AWAITING_TIME",
+                  "value": "AWAITING_TIME"
+                },
+                {
+                  "name": "AWAITING_SLOT_CONFIRM",
+                  "value": "AWAITING_SLOT_CONFIRM"
+                },
+                {
+                  "name": "NEW",
+                  "value": "NEW"
+                },
+                {
+                  "name": "END",
+                  "value": "END"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Updated At",
+              "displayName": "Updated At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Assignee",
+              "displayName": "Assignee",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Todo",
+                  "value": "Todo"
+                },
+                {
+                  "name": "In progress",
+                  "value": "In progress"
+                },
+                {
+                  "name": "Done",
+                  "value": "Done"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachments",
+              "displayName": "Attachments",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachment Summary",
+              "displayName": "Attachment Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Party Size",
+              "displayName": "Party Size",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -416,
+        1200
+      ],
+      "id": "e9b44857-24b6-40be-9770-345939f9f30c",
+      "name": "Save Party Size",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1fINMSXkeb78fcOT",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { reply: `Got it — a table for ${$('Extract Party Size').item.json.extracted.party_size}. 📅 What date would you like to book?` } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        1200
+      ],
+      "id": "2f89835a-d919-40bb-926d-0fe02b176765",
+      "name": "Party Size Reply"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = (($json.message || '').trim());\nconst lower = msg.toLowerCase();\nlet dateLabel = msg;\nconst today = new Date();\nif (lower === 'today') {\n  dateLabel = today.toISOString().slice(0,10);\n} else if (lower === 'tomorrow') {\n  const t = new Date(today.getTime() + 24*60*60*1000);\n  dateLabel = t.toISOString().slice(0,10);\n}\nreturn [{ json: { ...$json, extracted: { booking_date: dateLabel } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        1360
+      ],
+      "id": "4020d9d8-7870-468c-8d59-678502fc4a16",
+      "name": "Extract Date"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appMmaMqLiBwe0WfS",
+          "mode": "list",
+          "cachedResultName": "SlotWise",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblzGGq4TLBvL8izn",
+          "mode": "list",
+          "cachedResultName": "Conversations",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS/tblzGGq4TLBvL8izn"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.session.recordId }}",
+            "State": "AWAITING_TIME"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true
+            },
+            {
+              "id": "Session ID",
+              "displayName": "Session ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Discord User ID",
+              "displayName": "Discord User ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Username",
+              "displayName": "Username",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Booking Type",
+              "displayName": "Booking Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Service",
+              "displayName": "Service",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Preferred Time",
+              "displayName": "Preferred Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Selected Slot",
+              "displayName": "Selected Slot",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "State",
+              "displayName": "State",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "AWAITING_PARTY_SIZE",
+                  "value": "AWAITING_PARTY_SIZE"
+                },
+                {
+                  "name": "AWAITING_DATE",
+                  "value": "AWAITING_DATE"
+                },
+                {
+                  "name": "AWAITING_TIME",
+                  "value": "AWAITING_TIME"
+                },
+                {
+                  "name": "AWAITING_SLOT_CONFIRM",
+                  "value": "AWAITING_SLOT_CONFIRM"
+                },
+                {
+                  "name": "NEW",
+                  "value": "NEW"
+                },
+                {
+                  "name": "END",
+                  "value": "END"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Updated At",
+              "displayName": "Updated At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Assignee",
+              "displayName": "Assignee",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Todo",
+                  "value": "Todo"
+                },
+                {
+                  "name": "In progress",
+                  "value": "In progress"
+                },
+                {
+                  "name": "Done",
+                  "value": "Done"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachments",
+              "displayName": "Attachments",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachment Summary",
+              "displayName": "Attachment Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Party Size",
+              "displayName": "Party Size",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -416,
+        1360
+      ],
+      "id": "d3dab973-ca93-4b73-ab6b-c5f41e06647c",
+      "name": "Save Date",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1fINMSXkeb78fcOT",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { reply: `Great, I've noted ${$('Extract Date').item.json.extracted.booking_date} as your date. ⏰ What time would you like to come in?` } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        1360
+      ],
+      "id": "b61b13a4-8589-4232-9561-00419f674f67",
+      "name": "Date Reply"
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseTimeToMinutes(str) {\n  const s = str.trim().toLowerCase();\n  const m = s.match(/(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?/);\n  if (!m) return 19 * 60;\n  let hour = parseInt(m[1], 10);\n  const minute = m[2] ? parseInt(m[2], 10) : 0;\n  const ampm = m[3];\n  if (ampm === 'pm' && hour < 12) hour += 12;\n  if (ampm === 'am' && hour === 12) hour = 0;\n  if (!ampm && hour < 8) hour += 12;\n  return hour * 60 + minute;\n}\nfunction minutesToLabel(mins) {\n  mins = ((mins % 1440) + 1440) % 1440;\n  let hour = Math.floor(mins / 60);\n  const minute = mins % 60;\n  const ampm = hour >= 12 ? 'PM' : 'AM';\n  let hour12 = hour % 12;\n  if (hour12 === 0) hour12 = 12;\n  return `${hour12}:${minute.toString().padStart(2,'0')} ${ampm}`;\n}\nconst requested = $json.message || '7 PM';\nconst baseMinutes = parseTimeToMinutes(requested);\nconst slots = [baseMinutes - 30, baseMinutes, baseMinutes + 30].map(minutesToLabel);\nreturn [{ json: { ...$json, extracted: { requested_time: requested, proposed_slots: slots } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        1520
+      ],
+      "id": "61146a35-8b82-4f07-8725-92f8200ff1c6",
+      "name": "Generate Slots"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appMmaMqLiBwe0WfS",
+          "mode": "list",
+          "cachedResultName": "SlotWise",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblzGGq4TLBvL8izn",
+          "mode": "list",
+          "cachedResultName": "Conversations",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS/tblzGGq4TLBvL8izn"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "id"
+          ],
+          "value": {
+            "id": "={{ $json.session.recordId }}",
+            "proposed_slots": "={{ JSON.stringify($json.extracted.proposed_slots) }}",
+            "State": "AWAITING_SLOT_CONFIRM"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -416,
+        1520
+      ],
+      "id": "efd9994a-9967-4ad2-a7f6-26451d767b4e",
+      "name": "Save Proposed Slots",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1fINMSXkeb78fcOT",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const slots = $('Generate Slots').item.json.extracted.proposed_slots; return [{ json: { reply: `Here are some available times: ${slots.join(', ')}. Which one works for you?` } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        1520
+      ],
+      "id": "3c08ebdb-794c-4e4a-80d1-62a1dd80b072",
+      "name": "Slots Reply"
+    },
+    {
+      "parameters": {
+        "jsCode": "function normalize(s) {\n  return (s || '').toLowerCase().replace(/\\s+/g,'').replace(/^0/, '');\n}\nlet slots = [];\ntry { slots = JSON.parse($json.session.proposed_slots || '[]'); } catch (e) { slots = []; }\nconst msg = $json.message || '';\nconst normMsg = normalize(msg);\nlet confirmed = slots.find(s => normalize(s) === normMsg || normalize(s).includes(normMsg) || normMsg.includes(normalize(s)));\nif (!confirmed) confirmed = slots.length > 0 ? slots[Math.floor(slots.length/2)] : msg;\nreturn [{ json: { ...$json, extracted: { confirmed_time: confirmed } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        1680
+      ],
+      "id": "f6647a65-a4b9-4dda-99b1-0dd89a66cd28",
+      "name": "Confirm Slot"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appMmaMqLiBwe0WfS",
+          "mode": "list",
+          "cachedResultName": "SlotWise",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblzGGq4TLBvL8izn",
+          "mode": "list",
+          "cachedResultName": "Conversations",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS/tblzGGq4TLBvL8izn"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "id"
+          ],
+          "value": {
+            "id": "={{ $json.session.recordId }}",
+            "booking_time": "={{ $json.extracted.confirmed_time }}",
+            "State": "END"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -416,
+        1680
+      ],
+      "id": "ba7c3dd0-bc58-45ca-884b-4de5964da2af",
+      "name": "Save Confirmed Time",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1fINMSXkeb78fcOT",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appMmaMqLiBwe0WfS",
+          "mode": "list",
+          "cachedResultName": "SlotWise",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnMzXZ9wzyLkcS8",
+          "mode": "list",
+          "cachedResultName": "Bookings",
+          "cachedResultUrl": "https://airtable.com/appMmaMqLiBwe0WfS/tblnMzXZ9wzyLkcS8"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $('Confirm Slot').item.json.user_id }}",
+            "username": "={{ $('Confirm Slot').item.json.username }}",
+            "party_size": "={{ $('Confirm Slot').item.json.session.party_size }}",
+            "booking_date": "={{ $('Confirm Slot').item.json.session.booking_date }}",
+            "booking_time": "={{ $('Confirm Slot').item.json.extracted.confirmed_time }}",
+            "status": "Confirmed",
+            "created_at": "={{ $now.toISO() }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -192,
+        1680
+      ],
+      "id": "2f43696f-76ee-45ab-94f0-25a3264ea301",
+      "name": "Create Booking",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1fINMSXkeb78fcOT",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const s = $('Confirm Slot').item.json;\nconst reply = `🎉 You're all set! Table for ${s.session.party_size} on ${s.session.booking_date} at ${s.extracted.confirmed_time} is confirmed. See you then!`;\nreturn [{ json: { reply } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        1664
+      ],
+      "id": "9a80a9d6-c19b-4762-b859-8f51f192593f",
+      "name": "Booking Confirmed Reply"
     }
   ],
-  "connections": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get Conversation State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conversation State": {
+      "main": [
+        [
+          {
+            "node": "Merge Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Session": {
+      "main": [
+        [
+          {
+            "node": "Detect Interrupt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Interrupt": {
+      "main": [
+        [
+          {
+            "node": "Is Active Booking Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Active Booking Session": {
+      "main": [
+        [
+          {
+            "node": "Booking Stage Router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "parse intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parse intent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Greeting Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Book Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Modify Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cancel Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Info Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Human Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unknown Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Greeting Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book Response": {
+      "main": [
+        [
+          {
+            "node": "Start Booking Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Booking Session": {
+      "main": [
+        [
+          {
+            "node": "Attach Book Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Book Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modify Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Response": {
+      "main": [
+        [
+          {
+            "node": "Reset Session (Cancel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset Session (Cancel)": {
+      "main": [
+        [
+          {
+            "node": "Attach Cancel Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Cancel Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Info Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Response": {
+      "main": [
+        [
+          {
+            "node": "Create Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Handoff": {
+      "main": [
+        [
+          {
+            "node": "Attach Human Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Human Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unknown Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booking Stage Router": {
+      "main": [
+        [
+          {
+            "node": "Extract Party Size",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Date",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Slots",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Confirm Slot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Party Size": {
+      "main": [
+        [
+          {
+            "node": "Save Party Size",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Party Size": {
+      "main": [
+        [
+          {
+            "node": "Party Size Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Party Size Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Date": {
+      "main": [
+        [
+          {
+            "node": "Save Date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Date": {
+      "main": [
+        [
+          {
+            "node": "Date Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Slots": {
+      "main": [
+        [
+          {
+            "node": "Save Proposed Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Proposed Slots": {
+      "main": [
+        [
+          {
+            "node": "Slots Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slots Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Slot": {
+      "main": [
+        [
+          {
+            "node": "Save Confirmed Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Confirmed Time": {
+      "main": [
+        [
+          {
+            "node": "Create Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Booking": {
+      "main": [
+        [
+          {
+            "node": "Booking Confirmed Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booking Confirmed Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "pinData": {},
   "meta": {
-    "templateCredsSetupCompleted": true,
     "instanceId": "c7f59735934440b5ca2abd90f340f0b295178e1dc8fbae01e39389052ab6c101"
   }
 }
